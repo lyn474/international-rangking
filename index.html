@@ -710,47 +710,6 @@
 </head>
 <body>
 
-<!-- 비밀번호 -->
-<div id="lockScreen" style="position: fixed; inset: 0; background: linear-gradient(135deg, #FF7A45 0%, #FF5A1F 50%, #E63946 100%); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px;">
-  <div style="background: #fff; border-radius: 20px; padding: 48px 40px; max-width: 380px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center;">
-    <div style="font-size: 48px; margin-bottom: 16px;">🔒</div>
-    <h2 style="font-size: 20px; font-weight: 700; color: #111; margin-bottom: 8px;">대시보드 접근</h2>
-    <p style="font-size: 13px; color: #6b7280; margin-bottom: 24px;">접근 비밀번호를 입력해주세요</p>
-    <input type="password" id="pwInput" placeholder="비밀번호" autocomplete="off"
-      style="width: 100%; padding: 14px 16px; font-size: 15px; border: 1.5px solid #e5e7eb; border-radius: 10px; outline: none; text-align: center; letter-spacing: 8px; font-family: inherit;"
-      onfocus="this.style.borderColor='#FF5A1F'"
-      onblur="this.style.borderColor='#e5e7eb'"
-      onkeydown="if(event.key==='Enter') checkPassword()">
-    <div id="pwError" style="font-size: 12px; color: #dc2626; margin-top: 10px; min-height: 18px; font-weight: 600;"></div>
-    <button onclick="checkPassword()" style="width: 100%; margin-top: 14px; padding: 13px; background: linear-gradient(135deg, #FF7A45, #FF5A1F); color: #fff; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;">접속하기</button>
-  </div>
-</div>
-
-<script>
-  const CORRECT_PW = '0401';
-  function checkPassword() {
-    const input = document.getElementById('pwInput');
-    const errorEl = document.getElementById('pwError');
-    if (input.value === CORRECT_PW) {
-      document.getElementById('lockScreen').style.opacity = '0';
-      document.getElementById('lockScreen').style.transition = 'opacity 0.3s ease';
-      setTimeout(() => { document.getElementById('lockScreen').style.display = 'none'; }, 300);
-      sessionStorage.setItem('dashboardAuth', 'ok');
-    } else {
-      errorEl.textContent = '비밀번호가 올바르지 않습니다';
-      input.value = '';
-      input.style.animation = 'shake 0.3s ease';
-      setTimeout(() => { input.style.animation = ''; }, 300);
-    }
-  }
-  if (sessionStorage.getItem('dashboardAuth') === 'ok') {
-    document.getElementById('lockScreen').style.display = 'none';
-  } else {
-    setTimeout(() => document.getElementById('pwInput').focus(), 100);
-  }
-</script>
-<style>@keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }</style>
-
 <div class="container">
 
 <header id="header-section">
