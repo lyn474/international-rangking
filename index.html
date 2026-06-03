@@ -1676,35 +1676,49 @@ async function parseExcelFile(file) {
     reader.onload = (e) => {
       try {
         const data = new Uint8Array(e.target.result);
-        const wb = XLSX.read(data, { type: 'array' });
+        const wb = XLSX.read(data, { type: 'array', cellDates: false });
         const ws = wb.Sheets[wb.SheetNames[0]];
-        const json = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+        // raw: false로 문자열 변환 시도, 그래도 안되면 String()
+        const json = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: false });
         
-        // 첫 행 = 헤더, 첫 두 컬럼 = NAME, type. 나머지 = 월별
         if (!json || json.length < 2) return reject(new Error('데이터 부족'));
         const header = json[0];
-        const monthCols = header.slice(2).filter(h => h !== null && h !== undefined && h !== '');
+        // 월 컬럼: 첫 2개 빼고, 빈 거 제외, 문자열로 강제 변환
+        const monthCols = header.slice(2)
+          .filter(h => h !== null && h !== undefined && h !== '')
+          .map(h => String(h).trim());
         
-        if (monthCols.length === 0) return reject(new Error('월 컬럼 없음'));
+        if (monthCols.length === 0) return reject(new Error('월 컬럼 없음 — 엑셀 형식을 확인하세요'));
         
-        // 데이터 행 파싱 (NAME forward-fill 처리)
+        // 데이터 행 파싱
         const rows = [];
         let currentName = null;
         for (let i = 1; i < json.length; i++) {
           const row = json[i];
-          if (row[0]) currentName = row[0];
-          if (row[1] === 'consultation_count') {
+          if (!row) continue;
+          if (row[0] !== null && row[0] !== undefined && row[0] !== '') currentName = String(row[0]).trim();
+          
+          const typeCell = row[1] ? String(row[1]).trim().toLowerCase() : '';
+          if (typeCell === 'consultation_count' && currentName) {
             const obj = { name: currentName };
             monthCols.forEach((m, idx) => {
               const val = row[2 + idx];
-              obj[m] = (val === null || val === '' || isNaN(val)) ? 0 : Number(val);
+              if (val === null || val === undefined || val === '') {
+                obj[m] = 0;
+              } else {
+                const n = Number(val);
+                obj[m] = isNaN(n) ? 0 : n;
+              }
             });
             rows.push(obj);
           }
         }
         
+        if (rows.length === 0) return reject(new Error('consultation_count 행을 찾을 수 없음'));
+        
         resolve({ months: monthCols, rows });
       } catch (err) {
+        console.error('parseExcelFile 에러:', err);
         reject(err);
       }
     };
@@ -1716,7 +1730,11 @@ async function parseExcelFile(file) {
 async function handleFiles(fileList) {
   const files = Array.from(fileList);
   for (const file of files) {
-    if (!file.name.match(/\\.(xlsx|xls)$/i)) continue;
+    const lname = file.name.toLowerCase();
+    if (!lname.endsWith('.xlsx') && !lname.endsWith('.xls')) {
+      console.warn('스킵된 파일 (xlsx/xls 아님):', file.name);
+      continue;
+    }
     
     const country = detectCountry(file.name);
     const entry = { file, country, parsed: null, error: null };
@@ -1724,7 +1742,8 @@ async function handleFiles(fileList) {
     try {
       entry.parsed = await parseExcelFile(file);
     } catch (err) {
-      entry.error = err.message;
+      console.error('파싱 실패:', file.name, err);
+      entry.error = err.message || '파싱 실패';
     }
     
     uploadedFiles.push(entry);
