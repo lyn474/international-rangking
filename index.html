@@ -5,6 +5,7 @@
 <title>강남언니 TOP 병원 대시보드</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -700,6 +701,165 @@
   }
   .modal-stat .small { font-size: 10px; color: #9ca3af; }
 
+  /* UPLOAD MODAL */
+  .upload-instructions {
+    background: #fff7ed;
+    border-left: 3px solid #FF7A45;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    font-size: 12px;
+    color: #7c2d12;
+    line-height: 1.6;
+  }
+  .upload-instructions strong { color: #9a3412; }
+  .upload-instructions ul { margin-top: 6px; padding-left: 16px; }
+  .upload-instructions li { margin: 2px 0; }
+  .upload-instructions code {
+    background: #fed7aa;
+    color: #7c2d12;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: 'SF Mono', Menlo, monospace;
+  }
+
+  .upload-dropzone {
+    border: 2px dashed #d1d5db;
+    border-radius: 12px;
+    padding: 32px 20px;
+    text-align: center;
+    cursor: pointer;
+    background: #fafbfc;
+    transition: all 0.2s;
+    margin-bottom: 14px;
+  }
+  .upload-dropzone:hover, .upload-dropzone.dragover {
+    border-color: #FF5A1F;
+    background: #fff7ed;
+  }
+  .upload-dz-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #4b5563;
+    margin-bottom: 4px;
+  }
+  .upload-dz-sub {
+    font-size: 11.5px;
+    color: #9ca3af;
+  }
+
+  .files-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+  .file-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #fafbfc;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+  }
+  .file-row.matched { border-color: #86efac; background: #f0fdf4; }
+  .file-row.error { border-color: #fca5a5; background: #fef2f2; }
+  .file-icon {
+    width: 32px;
+    height: 32px;
+    background: #FF7A45;
+    color: #fff;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .file-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .file-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #111;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .file-meta {
+    font-size: 10.5px;
+    color: #6b7280;
+    margin-top: 2px;
+  }
+  .file-country-select {
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 5px 8px;
+    font-size: 11.5px;
+    background: #fff;
+    color: #111;
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .file-remove {
+    background: #f3f4f6;
+    border: none;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #6b7280;
+    flex-shrink: 0;
+    font-size: 15px;
+    line-height: 1;
+    padding: 0;
+  }
+  .file-remove:hover { background: #fee2e2; color: #dc2626; }
+
+  .upload-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid #f0f1f3;
+  }
+  .upload-btn-primary {
+    background: linear-gradient(135deg, #FF7A45, #FF5A1F);
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .upload-btn-primary:disabled {
+    background: #d1d5db;
+    cursor: not-allowed;
+  }
+  .upload-btn-secondary {
+    background: #fff;
+    color: #6b7280;
+    border: 1px solid #e5e7eb;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .upload-btn-secondary:hover { background: #f9fafb; }
+
   @media (max-width: 1280px) { .countries-grid:not(.cols-1):not(.cols-2):not(.cols-3) { grid-template-columns: repeat(3, 1fr); } }
   @media (max-width: 900px) {
     .countries-grid { grid-template-columns: repeat(2, 1fr) !important; }
@@ -729,6 +889,10 @@
       <label class="switch"><input type="checkbox" id="modeToggle" onchange="toggleMode()"><span class="slider"></span></label>
       <span class="mode-label" id="modeLabel">외부용</span>
     </div>
+    <button class="header-download-btn" onclick="openUploadModal()" title="엑셀 파일 업로드로 데이터 업데이트">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+      데이터 업데이트
+    </button>
     <button class="header-download-btn" onclick="downloadAll()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
       전체 다운로드
@@ -834,6 +998,42 @@
     </div>
     <div class="modal-stats" id="modalStats"></div>
     <div class="modal-chart-wrap"><canvas id="modalChart"></canvas></div>
+  </div>
+</div>
+
+<!-- UPLOAD MODAL -->
+<div class="modal-overlay" id="uploadModal" onclick="if(event.target===this) closeUploadModal()">
+  <div class="modal-content" style="max-width: 720px;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">📤 데이터 업데이트</div>
+        <div class="modal-sub">6개국 엑셀 파일(.xlsx)을 업로드하세요. 각 국가별로 1개씩 (총 6개)</div>
+      </div>
+      <button class="modal-close" onclick="closeUploadModal()">×</button>
+    </div>
+
+    <div class="upload-instructions">
+      <strong>💡 파일 인식 방식:</strong>
+      <ul>
+        <li>파일명에 <code>한국 / 일본 / 중국 / 태국 / 대만 / 미국</code> 키워드가 들어있으면 자동 매칭</li>
+        <li>매칭 안 되면 아래에서 직접 국가 선택 가능</li>
+        <li>엑셀 컬럼 형식: <code>NAME / consultation_count / 월별 컬럼(예: 26.05)</code></li>
+      </ul>
+    </div>
+
+    <div class="upload-dropzone" id="uploadDropzone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width: 40px; height: 40px; color: #9ca3af; margin-bottom: 8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+      <div class="upload-dz-title">파일을 드래그하거나 클릭해서 선택</div>
+      <div class="upload-dz-sub">.xlsx 파일 여러 개 동시 업로드 가능</div>
+      <input type="file" id="fileInput" accept=".xlsx,.xls" multiple style="display: none;">
+    </div>
+
+    <div id="filesList" class="files-list"></div>
+
+    <div class="upload-actions">
+      <button class="upload-btn-secondary" onclick="resetUploadFiles()">초기화</button>
+      <button class="upload-btn-primary" id="applyUploadBtn" onclick="applyUploadedData()" disabled>대시보드에 적용</button>
+    </div>
   </div>
 </div>
 
@@ -1442,6 +1642,300 @@ async function downloadAll() {
   finally { document.querySelectorAll('.download-btn, .header-download-btn').forEach(b => b.style.visibility = 'visible'); }
 }
 
+// === 데이터 업로드 ===
+let uploadedFiles = []; // { file, country, parsed }
+
+function openUploadModal() {
+  document.getElementById('uploadModal').classList.add('show');
+}
+function closeUploadModal() {
+  document.getElementById('uploadModal').classList.remove('show');
+}
+
+function detectCountry(filename) {
+  const name = filename.toLowerCase();
+  const map = {
+    '한국': ['한국', 'korea', 'kr', 'korean'],
+    '일본': ['일본', 'japan', 'jp', 'japanese'],
+    '중국': ['중국', 'china', 'cn', 'chinese'],
+    '태국': ['태국', 'thai', 'th'],
+    '대만': ['대만', 'taiwan', 'tw'],
+    '미국': ['미국', 'usa', 'us', 'america', 'eng', 'english']
+  };
+  for (const [country, keywords] of Object.entries(map)) {
+    for (const kw of keywords) {
+      if (name.includes(kw)) return country;
+    }
+  }
+  return null;
+}
+
+async function parseExcelFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+        
+        // 첫 행 = 헤더, 첫 두 컬럼 = NAME, type. 나머지 = 월별
+        if (!json || json.length < 2) return reject(new Error('데이터 부족'));
+        const header = json[0];
+        const monthCols = header.slice(2).filter(h => h !== null && h !== undefined && h !== '');
+        
+        if (monthCols.length === 0) return reject(new Error('월 컬럼 없음'));
+        
+        // 데이터 행 파싱 (NAME forward-fill 처리)
+        const rows = [];
+        let currentName = null;
+        for (let i = 1; i < json.length; i++) {
+          const row = json[i];
+          if (row[0]) currentName = row[0];
+          if (row[1] === 'consultation_count') {
+            const obj = { name: currentName };
+            monthCols.forEach((m, idx) => {
+              const val = row[2 + idx];
+              obj[m] = (val === null || val === '' || isNaN(val)) ? 0 : Number(val);
+            });
+            rows.push(obj);
+          }
+        }
+        
+        resolve({ months: monthCols, rows });
+      } catch (err) {
+        reject(err);
+      }
+    };
+    reader.onerror = () => reject(new Error('파일 읽기 실패'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+async function handleFiles(fileList) {
+  const files = Array.from(fileList);
+  for (const file of files) {
+    if (!file.name.match(/\\.(xlsx|xls)$/i)) continue;
+    
+    const country = detectCountry(file.name);
+    const entry = { file, country, parsed: null, error: null };
+    
+    try {
+      entry.parsed = await parseExcelFile(file);
+    } catch (err) {
+      entry.error = err.message;
+    }
+    
+    uploadedFiles.push(entry);
+  }
+  renderFilesList();
+}
+
+function renderFilesList() {
+  const container = document.getElementById('filesList');
+  if (uploadedFiles.length === 0) {
+    container.innerHTML = '';
+    document.getElementById('applyUploadBtn').disabled = true;
+    return;
+  }
+  
+  const COUNTRY_OPTIONS = ['한국', '일본', '중국', '태국', '대만', '미국'];
+  
+  container.innerHTML = uploadedFiles.map((entry, idx) => {
+    const ext = entry.file.name.split('.').pop().toUpperCase();
+    let metaText = '';
+    let rowClass = 'file-row';
+    
+    if (entry.error) {
+      metaText = `❌ ${entry.error}`;
+      rowClass += ' error';
+    } else if (entry.parsed) {
+      const months = entry.parsed.months;
+      metaText = `✅ ${entry.parsed.rows.length}개 병원 · ${months[0]} ~ ${months[months.length-1]}`;
+      if (entry.country) rowClass += ' matched';
+    }
+    
+    const selectHtml = `
+      <select class="file-country-select" onchange="updateFileCountry(${idx}, this.value)">
+        <option value="">국가 선택</option>
+        ${COUNTRY_OPTIONS.map(c => `<option value="${c}" ${entry.country === c ? 'selected' : ''}>${c}</option>`).join('')}
+      </select>
+    `;
+    
+    return `
+      <div class="${rowClass}">
+        <div class="file-icon">${ext}</div>
+        <div class="file-info">
+          <div class="file-name">${entry.file.name}</div>
+          <div class="file-meta">${metaText}</div>
+        </div>
+        ${selectHtml}
+        <button class="file-remove" onclick="removeUploadedFile(${idx})">×</button>
+      </div>
+    `;
+  }).join('');
+  
+  // Apply 버튼 활성화 체크 (모든 파일에 country 매칭됐는지)
+  const allMatched = uploadedFiles.every(e => e.country && e.parsed);
+  const hasAtLeastOne = uploadedFiles.some(e => e.country && e.parsed);
+  document.getElementById('applyUploadBtn').disabled = !hasAtLeastOne;
+  document.getElementById('applyUploadBtn').textContent = 
+    allMatched ? `대시보드에 적용 (${uploadedFiles.length}개국)` : `대시보드에 적용 (${uploadedFiles.filter(e => e.country && e.parsed).length}개국, 일부)`;
+}
+
+function updateFileCountry(idx, country) {
+  uploadedFiles[idx].country = country || null;
+  renderFilesList();
+}
+
+function removeUploadedFile(idx) {
+  uploadedFiles.splice(idx, 1);
+  renderFilesList();
+}
+
+function resetUploadFiles() {
+  uploadedFiles = [];
+  document.getElementById('fileInput').value = '';
+  renderFilesList();
+}
+
+function applyUploadedData() {
+  // 적용 가능한 것만 필터
+  const valid = uploadedFiles.filter(e => e.country && e.parsed);
+  if (valid.length === 0) {
+    alert('적용 가능한 파일이 없습니다.');
+    return;
+  }
+  
+  // 새 데이터 빌드
+  const newData = {};
+  const newTotals = {};
+  let allMonths = new Set();
+  let newHospitalsSet = new Set();
+  
+  // 기존 데이터에서 변경되지 않은 국가는 유지
+  Object.keys(DATA).forEach(c => {
+    newData[c] = DATA[c];
+    newTotals[c] = TOTALS[c] || {};
+    Object.keys(DATA[c]).forEach(m => allMonths.add(m));
+    Object.values(DATA[c]).forEach(list => list.forEach(h => newHospitalsSet.add(h.name)));
+  });
+  
+  // 업로드된 파일로 덮어쓰기
+  valid.forEach(entry => {
+    const { country, parsed } = entry;
+    const countryData = {};
+    const countryTotals = {};
+    
+    parsed.months.forEach(m => allMonths.add(m));
+    
+    parsed.months.forEach(m => {
+      // 0 초과만, DB 내림차순으로, TOP 100
+      const list = parsed.rows
+        .map(r => ({ name: r.name, db: r[m] || 0 }))
+        .filter(h => h.db > 0)
+        .sort((a, b) => b.db - a.db);
+      
+      countryTotals[m] = list.reduce((sum, h) => sum + h.db, 0);
+      countryData[m] = list.slice(0, 100);
+      
+      list.forEach(h => newHospitalsSet.add(h.name));
+    });
+    
+    newData[country] = countryData;
+    newTotals[country] = countryTotals;
+  });
+  
+  // 월 정렬
+  const sortedMonths = Array.from(allMonths).sort();
+  
+  // 전역 변수 업데이트
+  Object.keys(DATA).forEach(k => delete DATA[k]);
+  Object.assign(DATA, newData);
+  Object.keys(TOTALS).forEach(k => delete TOTALS[k]);
+  Object.assign(TOTALS, newTotals);
+  MONTHS.length = 0;
+  MONTHS.push(...sortedMonths);
+  ALL_HOSPITALS.length = 0;
+  ALL_HOSPITALS.push(...Array.from(newHospitalsSet).sort());
+  
+  // 월 선택 셀렉터 다시 채우기
+  const selectors = ['singleMonth', 'customStart', 'customEnd'];
+  selectors.forEach(id => {
+    const sel = document.getElementById(id);
+    const oldValue = sel.value;
+    sel.innerHTML = '';
+    MONTHS.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = m;
+      sel.appendChild(opt);
+    });
+    // 기존 값이 여전히 유효하면 유지, 아니면 마지막 월
+    if (MONTHS.includes(oldValue)) {
+      sel.value = oldValue;
+    } else {
+      sel.value = MONTHS[MONTHS.length - 1];
+    }
+  });
+  
+  // 데이터 적용 완료 메시지
+  const appliedCountries = valid.map(e => e.country).join(', ');
+  
+  // 닫고 리렌더
+  closeUploadModal();
+  resetUploadFiles();
+  render();
+  
+  // 토스트 메시지
+  showToast(`✅ 데이터 업데이트 완료 — ${appliedCountries}`);
+}
+
+function showToast(message) {
+  const existing = document.getElementById('toastMsg');
+  if (existing) existing.remove();
+  
+  const toast = document.createElement('div');
+  toast.id = 'toastMsg';
+  toast.style.cssText = 'position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #111; color: #fff; padding: 14px 24px; border-radius: 10px; font-size: 13px; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,0.3); z-index: 2000; opacity: 0; transition: opacity 0.3s;';
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  
+  setTimeout(() => toast.style.opacity = '1', 10);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    setTimeout(() => toast.remove(), 300);
+  }, 3500);
+}
+
+// 드래그앤드롭 이벤트 바인딩 (init에서 호출되도록 분리)
+function setupUploadDropzone() {
+  const dz = document.getElementById('uploadDropzone');
+  const fi = document.getElementById('fileInput');
+  
+  dz.addEventListener('click', () => fi.click());
+  fi.addEventListener('change', (e) => handleFiles(e.target.files));
+  
+  ['dragenter', 'dragover'].forEach(evt => {
+    dz.addEventListener(evt, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dz.classList.add('dragover');
+    });
+  });
+  ['dragleave', 'drop'].forEach(evt => {
+    dz.addEventListener(evt, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dz.classList.remove('dragover');
+    });
+  });
+  dz.addEventListener('drop', (e) => {
+    if (e.dataTransfer.files) handleFiles(e.dataTransfer.files);
+  });
+}
+
 // === 초기화 ===
 function init() {
   // 월 선택기 채우기
@@ -1462,6 +1956,7 @@ function init() {
   endSel.value = MONTHS[MONTHS.length - 2];
 
   renderCountryToggles();
+  setupUploadDropzone();
   render();
 }
 init();
